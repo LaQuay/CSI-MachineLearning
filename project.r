@@ -90,30 +90,30 @@ ntest <- N - nlearn
 # Naive Bayes Classifier
 
 library (e1071)
+set.seed (6046)
+
+deposit <- read.table ("dataset/bank-full.csv", header=TRUE, stringsAsFactors=TRUE, sep=";")
 
 depositBayes <- deposit[c("job", "marital")]
-
-colnames(depositBayes) <- c(" job", "marital")
-namevector <- c("Class")
-
-depositBayes[ , namevector] <- 0
+colnames(depositBayes) <- c("job", "marital")
 
 summary(depositBayes)
 
-set.seed(1111)
-
 N <- nrow(depositBayes)
 
-## We first split the available data into learning and test sets, selecting randomly 2/3 and 1/3 of the data
+## We first split the available data into learning and test sets, 
+## selecting randomly 2/3 and 1/3 of the data
 ## We do this for a honest estimation of prediction performance
 
 learn <- sample(1:N, round(2*N/3))
 nlearn <- length(learn)
+test <- -learn
 ntest <- N - nlearn
 
-model <- naiveBayes(Class ~ ., data = depositBayes[learn,])
+model <- naiveBayes(job ~ marital, data = depositBayes[learn,])
 model
 
-pred <- predict(model, depositBayes[1:20, -1], type="raw")
+pred <- predict(model, depositBayes[-learn,])
 
-table(pred, depositBayes$job)
+df <- data.frame(prediction=pred, actual=depositBayes[-learn,]$job)
+table(df)
