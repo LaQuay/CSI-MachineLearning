@@ -87,19 +87,20 @@ ntest <- N - nlearn
 
 ### Marc:
 
-# Naive Bayes Classifier
+### Naive Bayes Classifier ###
 
 library (e1071)
 set.seed (6046)
 
 deposit <- read.table ("dataset/bank-full.csv", header=TRUE, stringsAsFactors=TRUE, sep=";")
 
-depositBayes <- deposit[c("job", "marital")]
-colnames(depositBayes) <- c("job", "marital")
+## Classify JOB - Marital
+depJobMar <- deposit[c("job", "marital")]
+colnames(depJobMar) <- c("job", "marital")
 
-summary(depositBayes)
+summary(depJobMar)
 
-N <- nrow(depositBayes)
+N <- nrow(depJobMar)
 
 ## We first split the available data into learning and test sets, 
 ## selecting randomly 2/3 and 1/3 of the data
@@ -110,10 +111,35 @@ nlearn <- length(learn)
 test <- -learn
 ntest <- N - nlearn
 
-model <- naiveBayes(job ~ marital, data = depositBayes[learn,])
-model
+modelJobMar <- naiveBayes(job ~ marital, data = depJobMar[learn,])
+modelJobMar
 
-pred <- predict(model, depositBayes[-learn,])
+pred <- predict(modelJobMar, depJobMar[-learn,])
 
-df <- data.frame(prediction=pred, actual=depositBayes[-learn,]$job)
-table(df)
+dfJobMar <- data.frame(prediction=pred, actual=depJobMar[-learn,]$job)
+table(dfJobMar)
+
+## Classify JOB - Education
+depJobEdu <- deposit[c("job", "education")]
+colnames(depJobEdu) <- c("job", "education")
+
+summary(depJobEdu)
+
+N <- nrow(depJobEdu)
+
+## We first split the available data into learning and test sets, 
+## selecting randomly 2/3 and 1/3 of the data
+## We do this for a honest estimation of prediction performance
+
+learn <- sample(1:N, round(2*N/3))
+nlearn <- length(learn)
+test <- -learn
+ntest <- N - nlearn
+
+modelJobEdu <- naiveBayes(job ~ education, data = depJobEdu[learn,])
+modelJobEdu
+
+pred <- predict(modelJobEdu, depJobEdu[-learn,])
+
+dfJobEdu <- data.frame(prediction=pred, actual=depJobEdu[-learn,]$job)
+table(dfJobEdu)
