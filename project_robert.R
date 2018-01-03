@@ -30,10 +30,12 @@ table(deposit$education)
 
 table(deposit$month)
 
-# highly skewed ... #Robert: specially in May, probably the campaign was done in that month more than others?
 
-hist(deposit$duration)
-hist(log(deposit$duration))
+# Robert checking poutcome
+table(deposit$poutcome) 
+
+hist(deposit$duration) # highly skewed ...
+hist(log(deposit$duration)) # fixing the skew?
 
 deposit$duration <- log(deposit$duration+0.001)
 
@@ -67,7 +69,8 @@ ggplot(d.categ,aes(x = value)) + facet_wrap(~variable,scales = "free") + geom_ba
 
 ## Preparing dataset for modeling: we should consider taking log10 of other variables, scaling the continuous ones (after the eventual log10s),
 ## treat the '999' and 'unknown', balance the errors (if need be) ...
-#Robert: no se a que se refiere con 999, he estado mirando y no hay problemas al respecto. Los unknown sí que habría que pensar como tratarlos
+# Robert: no se a que se refiere con 999, he estado mirando y no veo problemas al respecto en los datos., igual es el tema de -1
+# Los unknown sí que habría que pensar como tratarlos.
 
 ## Since we want to use different methods, we need CV and a separate test set:
 
@@ -82,4 +85,4 @@ learn.data <- deposit[learn.indexes,]
 nlearn <- length(learn.indexes)
 ntest <- N - nlearn
 
-...
+
