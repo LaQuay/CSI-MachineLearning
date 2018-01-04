@@ -85,10 +85,13 @@ ntest <- N - nlearn
 
 #attach(deposit)
 
-#glm.fit = glm(subscribed~., data=learn.data, family=binomial)
+glm.fit = glm(subscribed~., data=learn.data, family=binomial)
 # Según el artículo del estudio, que podemos mencionar, hay 6 valores que destacan por encima de los demás:
 # duration, month, previous, pdays, poutcome (First contact duration no lo tenemos en el dataset)
 glm.fit = glm(subscribed~duration+month+previous+pdays+poutcome, data=learn.data, family=binomial)
+
+# Si miramos las variables que tienen el coeficiente positivo y el p-value pequeño...
+glm.fit = glm(subscribed~marital+education+default+balance+month+previous+poutcome, data=learn.data, family=binomial)
 summary(glm.fit)
 
 glm.probs=predict(glm.fit, test.data, type="response")
@@ -98,7 +101,7 @@ glm.pred[glm.probs>.5]="yes"
 
 summary(test.data$subscribed) # 1748 yes answers
 table(glm.pred, test.data$subscribed) # 554 correct yes answers predicted by our model
-554/(1194+554) # 31.70% correct prediction for positive answers
+298/(1194+298) # 31.70% correct prediction for positive answers
 mean(glm.pred==test.data$subscribed) # 89.91% overall accuracy
 mean(glm.pred!=test.data$subscribed) # 10.09% overall test error. 
 # The last two numbers are so high because we take into account also the subscribe==no answer, is it a valid model?
