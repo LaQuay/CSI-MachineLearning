@@ -97,14 +97,18 @@ summary(glm.fit)
 glm.probs=predict(glm.fit, test.data, type="response")
 glm.pred=rep("no", length(glm.probs))
 
-glm.pred[glm.probs>.5]="yes"
+glm.pred[glm.probs>.5]="yes" # We should lower this threshold since a bank may want to know people with a lower change that will subscribe
+# in order to concentrate in them their efforts, this will also increase our success rate among subscribed
 
 summary(test.data$subscribed) # 1748 yes answers
 table(glm.pred, test.data$subscribed) # 554 correct yes answers predicted by our model
-298/(1194+298) # 31.70% correct prediction for positive answers
+554/(1194+554) # 31.70% correct prediction for positive answers
+597/(1194+597) # Usando todas las varibables tiene más precision 31.70% correct prediction for positive answers
 mean(glm.pred==test.data$subscribed) # 89.91% overall accuracy
 mean(glm.pred!=test.data$subscribed) # 10.09% overall test error. 
 # The last two numbers are so high because we take into account also the subscribe==no answer, is it a valid model?
+
+
 
 # DUDAS
 # Preprocesar datos?
