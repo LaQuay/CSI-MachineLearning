@@ -43,7 +43,7 @@ ggplot(d.categ,aes(x = value)) + facet_wrap(~variable,scales = "free") + geom_ba
 # The duration of the contact duration is highy skewed so we fix it applying log
 hist(deposit$duration)
 hist(log(deposit$duration))
-deposit$duration = log(deposit$duration+0.001) # +0.001 para evitar -Inf
+deposit$duration = log(deposit$duration+0.001) # +0.001 to avoid -Inf
 
 # The balance is also highly skewed and it has negative values
 hist(deposit$balance)
@@ -92,6 +92,7 @@ ntest <- N - nlearn
                                                     #### MODELLING ####
 # LOGISTIC REGRESSION
 # We use Logistic Regression as recommended since it doesn't need a lot of preprocessing of the data and we also have a lot of categorical variables
+
 # ORIGINAL DATA
 # First aproximation with the original unchanged data & all variables
 glm.fit = glm(subscribed~., data=original.learn.data, family="binomial")
@@ -113,6 +114,8 @@ glm.pred[glm.probs>.5]="yes"
 # then the accuracy decreases to 88.30%, but false negatives are reduces so the accuracy for predicting subscriptions goes up to
 # (1155(593+1155))*100=66.08%, which is a much better value. This may make more sense for the bank since they can spend their effort
 # on contacting clients that have a higher probability of buying the finantial product.
+# It is also important to mention that lowering the threshold will increment the number of false positives, in this case from
+# 345 to 1170, so we need more domain knowledge to know if this is acceptable or not by the bank
 table(glm.pred, original.test.data$subscribed)
 mean(glm.pred==original.test.data$subscribed)
 mean(glm.pred!=original.test.data$subscribed)
