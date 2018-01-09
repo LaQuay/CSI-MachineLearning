@@ -39,18 +39,22 @@ ggplot(d.categ,aes(x = value)) + facet_wrap(~variable,scales = "free") + geom_ba
 # In conclusion LDA/QDA may not the best choice so the best method to use is Logistic Regression
 
                                                       #### PRE-PROCESSING ####
-
-# The duration of the contact duration is highy skewed so we fix it applying log
-hist(deposit$duration)
-hist(log(deposit$duration))
-deposit$duration = log(deposit$duration+0.001) # +0.001 to avoid -Inf
-
-# The balance is also highly skewed and it has negative values
+#### Fixing skewness and scaling continuous variables
+# The balance has negative values, so we can only scale it
 hist(deposit$balance)
 # There are 3766 for negative balance
 # The only way to fix it is to delete this observations so we choose to leave it as it is since we don't want to lose data
-# Is it better to delete them?
 sum(deposit$balance<0)
+deposit$balance = scale(deposit$balance)
+
+# duration, campaign and previous are all skewed, so we apply log and scale
+hist(deposit$duration)
+hist(log(deposit$duration))
+deposit$duration = scale(log(deposit$duration+0.001)) # +0.001 to avoid -Inf
+
+# Applying log and scale to campaign and previous has some undesired effects, so we will leave them as they are
+hist(scale(log(deposit$campaign+0.001)))
+hist(scale(log(deposit$previous+0.001)))
 
 # pdays has most of values -1 (not contacted previously). 
 # We make a categorical value with "contacted" for pdays!=-1 and "not contacted" previously for pdays=-1
@@ -63,6 +67,9 @@ plot(deposit$pdays)
 
 # There are 288 subscriptions for unknown job, we leave it as it is since we don't want to delete this data
 summary(deposit[deposit$job=="unknown",]) 
+
+# We could change the unkown values to NA (as well as the 0 previous contacts variables), this is useful if we use a Random Forest algorythm,
+# but since it is not the case we leave it as it is
 
 # We plot again after pre-processing
 d.cont <- melt(deposit[,c("age","balance","duration","campaign","previous")])
@@ -89,8 +96,8 @@ original.test.data <- original_data[test.indexes,]
 nlearn <- length(learn.indexes)
 ntest <- N - nlearn
 
-                                                    #### MODELLING ####
-# LOGISTIC REGRESSION
+                                                        #### MODELLING ####
+############ LOGISTIC REGRESSION ##########
 # We use Logistic Regression as recommended since it doesn't need a lot of preprocessing of the data and we also have a lot of categorical variables
 
 # ORIGINAL DATA
@@ -99,78 +106,78 @@ glm.fit = glm(subscribed~., data=original.learn.data, family="binomial")
 
 # Observing the p-values, we can have an idea of the variables that have more importance in predicting our model,
 # so we can fit the mode again with just the variable that actually have an influence on our model
-# We can discard the following since they affect our model less: age, job, marital, default, balance and poutcome
+# We can discard the following since they affect our model less: age, job, marital, default, balance, pdays and previous
 summary(glm.fit)
 
 # We calculate the prediction with and without the discarded variables and compare the errors
 
 glm.probs=predict(glm.fit, original.test.data, type="response")
 glm.pred=rep("no", length(glm.probs))
-
 glm.pred[glm.probs>.5]="yes"
 
-# We can see that our model is pretty accurate (90.07%) in general, but it has a low accuracy for predicting
-# positive subscriptions (597/(597+1151))*100=34,15%. If we lower our threshold for predicting positive subscription to 0.2,
-# then the accuracy decreases to 88.30%, but false negatives are reduces so the accuracy for predicting subscriptions goes up to
-# (1155(593+1155))*100=66.08%, which is a much better value. This may make more sense for the bank since they can spend their effort
-# on contacting clients that have a higher probability of buying the finantial product.
-# It is also important to mention that lowering the threshold will increment the number of false positives, in this case from
-# 345 to 1170, so we need more domain knowledge to know if this is acceptable or not by the bank
-table(glm.pred, original.test.data$subscribed)
-mean(glm.pred==original.test.data$subscribed)
-mean(glm.pred!=original.test.data$subscribed)
+# We choose 3 values to represent our model performance: accuracy, error and precision, the last one is important
+# because the bank wants to contact only those clients that are more probable to subscribe to the loan
+# We can see that accuracy is high (90.07 %), but precission is low (34.15%), to solve this we lower the threshold
+# for which a client may subscribe a loan (the probability) compare the values again, since for the bank clients
+# with 30% probability of subscribing is probably worth to spend it's ressources contacting them
+res.performance = table(glm.pred, original.test.data$subscribed)
+res.accuracy = (res.performance[2,2]+res.performance[1,1])/sum(res.performance)*100
+res.error = 100-res.accuracy
+res.precision = (res.performance[2,2])/(res.performance[2,2]+res.performance[1,2])*100
 
-glm.pred[glm.probs>.2]="yes"
-table(glm.pred, original.test.data$subscribed)
-mean(glm.pred==original.test.data$subscribed)
-mean(glm.pred!=original.test.data$subscribed)
+# Accuracy is slightly lower (90.03%) but precission has almost doubled (53.78%)
+glm.pred[glm.probs>.3]="yes"
+res.performance = table(glm.pred, original.test.data$subscribed)
+res.accuracy = (res.performance[2,2]+res.performance[1,1])/sum(res.performance)*100
+res.error = 100-res.accuracy
+res.precision = (res.performance[2,2])/(res.performance[2,2]+res.performance[1,2])*100
 
 # Now we fit the model without the variables discarded before
-glm.fit = glm(subscribed~.-age-job-marital-default-balance-poutcome, data=original.learn.data, family="binomial")
-
+glm.fit = glm(subscribed~.-age-job-marital-default-balance-pdays-previous, data=original.learn.data, family="binomial")
 glm.probs=predict(glm.fit, original.test.data, type="response")
 glm.pred=rep("no", length(glm.probs))
 
-# The total accuracy decreases to 87.19% and for positive subscriptions is (1120/(1120+628))*100=64.07%,
-# a slightly higher test error, so using less variables makes our model a bit less accurate
-# so we will use a model taking into account all variables. If we have too many variables and computation time is important,
+# The total accuracy decreases to 89.92% and precison to 53.31%, so using less variables makes our model a bit less accurate
+# If we have too many variables and computation time is important,
 # we can also see that removing the ones we selected won't affect so much our model prediction
-glm.pred[glm.probs>.2]="yes"
-table(glm.pred, original.test.data$subscribed)
-mean(glm.pred==original.test.data$subscribed)
-mean(glm.pred!=original.test.data$subscribed)
+glm.pred[glm.probs>.3]="yes"
+res.performance = table(glm.pred, original.test.data$subscribed)
+res.accuracy = (res.performance[2,2]+res.performance[1,1])/sum(res.performance)*100
+res.error = 100-res.accuracy
+res.precision = (res.performance[2,2])/(res.performance[2,2]+res.performance[1,2])*100
 
 # PRE-PROCESSED DATA
-
+# We will fit our with all the variables and also removing the ones that we mentioned before
 glm.fit = glm(subscribed~., data=learn.data, family="binomial")
+glm.probs=predict(glm.fit, test.data, type="response")
 
+glm.pred=rep("no", length(glm.probs))
+
+glm.pred[glm.probs>.3]="yes"
+# Accuracy is 89.40% and precission is 57.95%, so our model is much more precise detecting clients 
+# that will probably buy the finantial product of the bank with the preprocessed data
+res.performance = table(glm.pred, original.test.data$subscribed)
+res.accuracy = (res.performance[2,2]+res.performance[1,1])/sum(res.performance)*100
+res.error = 100-res.accuracy
+res.precision = (res.performance[2,2])/(res.performance[2,2]+res.performance[1,2])*100
+
+glm.fit = glm(subscribed~.-age-job-marital-default-balance-pdays-previous, data=learn.data, family="binomial")
 glm.probs=predict(glm.fit, test.data, type="response")
 glm.pred=rep("no", length(glm.probs))
 
-glm.pred[glm.probs>.2]="yes"
+glm.pred[glm.probs>.3]="yes"
+# Accuracy: 89.47%, precision: 57.44%
+# As before, there is a small reduction in accuracy and precision but the results with preprocessed data are better
+res.performance = table(glm.pred, original.test.data$subscribed)
+res.accuracy = (res.performance[2,2]+res.performance[1,1])/sum(res.performance)*100
+res.error = 100-res.accuracy
+res.precision = (res.performance[2,2])/(res.performance[2,2]+res.performance[1,2])*100
 
-# We have a total accuracy of 86.97%, which is a bit lower than with not pre-processed data, 
-# but for positive subscriptions it's of (1252/(1252+496))*100=71.62%, which is significantly higher than
-# the previous one, so our model is much more precise detecting clients that will probably buy the finantial product of the bank
-table(glm.pred, test.data$subscribed)
-mean(glm.pred==test.data$subscribed)
-mean(glm.pred!=test.data$subscribed)
 
-# DUDAS
 
-# Deberíamos hacer el análisis LDA y QDA para comparar?
-# LDA ??
-# QDA ??
 
-# Robert: estos comentarios significa que el preprocesado lo deja tal cual? O que hay que hacaer algo al respecto?
-## what to do with 'pdays' and 'previous'? it is not clear ... we leave as it is
-## the 'unknown' and "-1" may need some treatment
-## The rest seem OK (it would take a careful analysis, and a lot of domain knowledge)
-## Preparing dataset for modeling: we should consider taking log10 of other variables, scaling the continuous ones (after the eventual log10s),
-## treat the '999' and 'unknown', balance the errors (if need be) ...
-# Robert: no se a que se refiere con 999, he estado mirando y no veo problemas al respecto en los datos., igual es el tema de -1
-# Robert: Cómo tratamos los 'unknown'?
-# Robert: Qué es el escalado de variables? Que es lo que debemos hacer en concreto?
+# LDA
+# QDA
 
 
 
