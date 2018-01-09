@@ -174,8 +174,6 @@ res.error = 100-res.accuracy
 res.precision = (res.performance[2,2])/(res.performance[2,2]+res.performance[1,2])*100
 
 
-
-
 # LDA
 # QDA
 
