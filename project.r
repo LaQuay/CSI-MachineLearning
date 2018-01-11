@@ -2,14 +2,13 @@
 #################### Project 1: the Bank Marketing Data Set
 #################### Robert Carausu & Marc Vila, 2018
 ####################################################################
-
+set.seed (6046)
 ## Direct marketing campaigns (phone calls) of a Portuguese banking institution. 
 ## The classification goal is to predict if the client will subscribe a term deposit
 library(reshape2)
 library(ggplot2)
 
 ## Getting the dataset
-set.seed (6046)
 deposit <- read.table(file="./data/bank.csv", header=TRUE, stringsAsFactors=TRUE, sep=";")
 # We rename the target variable
 colnames(deposit)[ncol(deposit)] <- "subscribed"
@@ -20,6 +19,7 @@ original_data = deposit # We make a copy to compare it later with our pre-proces
 dim(deposit)
 summary(deposit)
 # 11.70% of subscribed, so our model sholdn't have a higher error than this
+# Data is very umbalanced so some models will adjust worse than others
 sum(deposit$subscribed=="yes")/sum(length(deposit$subscribed))*100
 
 ## Let's have a visual inspection of the continuous variables before pre-processing
@@ -36,7 +36,7 @@ d.categ <- melt(deposit, measure.vars=c("job","marital","education","housing","l
 ggplot(d.categ,aes(x = value)) + facet_wrap(~variable,scales = "free") + geom_bar() + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5))
 
 # This dataset needs a lot of pre-processing ... also it displays a good mixture of categorical and numeric variables
-# In conclusion LDA/QDA may not the best choice so the best method to use is Logistic Regression
+# In conclusion LDA/QDA may not the best choice, a good choice may be Logistic Regression. We will test also Naive Bayes and Random Forest
 
                                                       #### PRE-PROCESSING ####
 #### Fixing skewness and scaling continuous variables
@@ -105,6 +105,8 @@ ntest <- N - nlearn
 glm.fit = glm(subscribed~., data=original.learn.data, family="binomial")
 
 # Observing the p-values, we can have an idea of the variables that have more importance in predicting our model,
+# a low p-value indicates that we can reject the null hipotesis, thus that variable has an importance on our model,
+# a higher p-value means that we can discard that variable
 # so we can fit the mode again with just the variable that actually have an influence on our model
 # We can discard the following since they affect our model less: age, job, marital, default, balance, pdays and previous
 summary(glm.fit)
@@ -240,36 +242,56 @@ learn.indexes <- sample(1:N, round(2*N/3))
 test.indexes <- all.indexes[-learn.indexes]
 
 learn.data <- deposit[learn.indexes,]
-#original.learn.data <- original_data[learn.indexes,]
 test.data <- deposit[test.indexes,]
-#original.test.data <- original_data[test.indexes,]
 
 nlearn <- length(learn.indexes)
 ntest <- N - nlearn
 
-lda.fit = lda(subscribed~., data=learn.data)
+lda.fit = lda(subscribed ~ ., data=learn.data)
 lda.pred = predict(lda.fit, test.data)
 lda.class = lda.pred$class
 
+# With LDA the precision is much lower, so we won't be using this model
 # 10.04% error, 89.95% accuracy, 43.71% precision
-table(lda.class, test.data$subscribed)
 res.performance = table(lda.class, test.data$subscribed)
 res.accuracy = (res.performance[2,2]+res.performance[1,1])/sum(res.performance)*100
 res.error = 100-res.accuracy
 res.precision = (res.performance[2,2])/(res.performance[2,2]+res.performance[1,2])*100
 
-# With LOOCV
-lda.cv <- lda(subscribed~., data=learn.data, CV=TRUE)
-lda.pred = predict(lda.cv, test.data) # I'm getting this error: http://r.789695.n4.nabble.com/help-with-predict-lda-td2277529.html
+################# NAIVE BAYES ##################
+library (e1071)
+library(caret)
+bayes.fit <- naiveBayes(subscribed ~ ., data = learn.data)
+bayes.pred <- predict(bayes.fit, test.data)
 
-res.performance = table(lda.cv$class, test.data$subscribed)
+res.performance = table(lda.class, test.data$subscribed)
+res.accuracy = (res.performance[2,2]+res.performance[1,1])/sum(res.performance)*100
+res.error = 100-res.accuracy
+res.precision = (res.performance[2,2])/(res.performance[2,2]+res.performance[1,2])*100
+
+#################### QDA ##################
+# Performs worse than LDA, but the precision is a bit higher so it detects better the subscriptions
+# 13.24% error, 86.76% accuracy, 48.97% precision
+qda.fit <- qda(subscribed ~ ., data=learn.data)
+qda.pred = predict(qda.fit, test.data)
+qda.class = qda.pred$class
+
+res.performance = table(qda.class, test.data$subscribed)
+res.accuracy = (res.performance[2,2]+res.performance[1,1])/sum(res.performance)*100
+res.error = 100-res.accuracy
+res.precision = (res.performance[2,2])/(res.performance[2,2]+res.performance[1,2])*100
+
+#################### Random Forest ##################
+library(randomForest)
+# 9.40% error, 90.60% accuracy, 62.21% precision, so far the best method
+rf <- randomForest(subscribed ~ ., data = original_data[learn.indexes,], ntree=500, proximity=FALSE)
+rf.pred <- predict(rf, newdata=original_data[-learn.indexes,])
+res.performance = table(Truth=original_data[-learn.indexes,]$subscribe,Pred=rf.pred)
 res.accuracy = (res.performance[2,2]+res.performance[1,1])/sum(res.performance)*100
 res.error = 100-res.accuracy
 res.precision = (res.performance[2,2])/(res.performance[2,2]+res.performance[1,2])*100
 
 
-#################### QDA ##################
-#################### Random Forest ##################
 
 
 
