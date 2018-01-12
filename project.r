@@ -1,13 +1,13 @@
 ####################################################################
 #################### Project 1: the Bank Marketing Data Set
-#################### Robert Carausu & Marc Vila, 2018
+#################### Robert Carausu & Marc Vila, CSI, 2018
 ####################################################################
 set.seed (6046)
-## Direct marketing campaigns (phone calls) of a Portuguese banking institution. 
-## The classification goal is to predict if the client will subscribe a term deposit
 library(reshape2)
 library(ggplot2)
 
+## Direct marketing campaigns (phone calls) of a Portuguese banking institution. 
+## The classification goal is to predict if the client will subscribe a term deposit
 ## Getting the dataset
 deposit <- read.table(file="./data/bank.csv", header=TRUE, stringsAsFactors=TRUE, sep=";")
 # We rename the target variable
@@ -36,29 +36,30 @@ d.categ <- melt(deposit, measure.vars=c("job","marital","education","housing","l
 ggplot(d.categ,aes(x = value)) + facet_wrap(~variable,scales = "free") + geom_bar() + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5))
 
 # This dataset needs a lot of pre-processing ... also it displays a good mixture of categorical and numeric variables
-# In conclusion LDA/QDA may not the best choice, a good choice may be Logistic Regression. We will test also Naive Bayes and Random Forest
+# In conclusion LDA/QDA may not the best choice, a good choice may be Logistic Regression. We will test also Naive Bayes and Random Forest and 
+# choose the best model that fits our problem
 
                                                       #### PRE-PROCESSING ####
 #### Fixing skewness and scaling continuous variables
 # The balance has negative values, so we can only scale it
-hist(deposit$balance)
+hist(deposit$balance, col='lightskyblue', border='lightskyblue4', xlab='balance', main='balance histogram', density=50)
 # There are 3766 for negative balance
 # The only way to fix it is to delete this observations so we choose to leave it as it is since we don't want to lose data
 sum(deposit$balance<0)
 deposit$balance = scale(deposit$balance)
 
 # duration, campaign and previous are all skewed, so we apply log and scale
-hist(deposit$duration)
-hist(log(deposit$duration))
+hist(deposit$duration, col='lightskyblue', border='lightskyblue4', xlab='duration', main='duration histogram', density=50)
+hist(log(deposit$duration), col='lightskyblue', border='lightskyblue4', xlab='duration', main='duration histogram', density=50)
 deposit$duration = scale(log(deposit$duration+0.001)) # +0.001 to avoid -Inf
 
 # Applying log and scale to campaign and previous has some undesired effects, so we will leave them as they are
-hist(scale(log(deposit$campaign+0.001)))
-hist(scale(log(deposit$previous+0.001)))
+hist(scale(log(deposit$campaign+0.001)), col='lightskyblue', border='lightskyblue4', xlab='campaign', main='campaign histogram', density=50)
+hist(scale(log(deposit$previous+0.001)), col='lightskyblue', border='lightskyblue4', xlab='previous', main='previous histogram', density=50)
 
 # pdays has most of values -1 (not contacted previously). 
 # We make a categorical value with "contacted" for pdays!=-1 and "not contacted" previously for pdays=-1
-hist(deposit$pdays)
+hist(deposit$pdays, col='lightskyblue', border='lightskyblue4', xlab='pdays', main='pdays histogram', density=50)
 deposit$pdays = cut(deposit$pdays, breaks=c(-Inf, 0.0, Inf), labels=c("not_contacted", "contacted"))
 table(deposit$pdays)
 plot(deposit$pdays)
@@ -78,6 +79,12 @@ ggplot(d.cont,aes(x = value)) + facet_wrap(~variable,scales = "free") + geom_his
 # Now pdays is categorical
 d.categ <- melt(deposit, measure.vars=c("job","marital","education","housing","loan","contact","default", "poutcome", "pdays"))
 ggplot(d.categ,aes(x = value)) + facet_wrap(~variable,scales = "free") + geom_bar() + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5))
+
+library(caret)
+library(MASS)
+library (e1071)
+library(caret)
+library(randomForest)
 
 # PREPARING THE TRAINING AND TEST DATA
 ## Since we want to use different methods, we need CV and a separate test set:
@@ -134,12 +141,13 @@ res.accuracy = (res.performance[2,2]+res.performance[1,1])/sum(res.performance)*
 res.error = 100-res.accuracy
 res.precision = (res.performance[2,2])/(res.performance[2,2]+res.performance[1,2])*100
 
-# Now we fit the model without the variables discarded before
+# Now we fit the model without the variables that had less of an impact
 glm.fit = glm(subscribed~.-age-job-marital-default-balance-pdays-previous, data=original.learn.data, family="binomial")
 glm.probs=predict(glm.fit, original.test.data, type="response")
 glm.pred=rep("no", length(glm.probs))
 
 # The total accuracy decreases to 89.92% and precison to 53.31%, so using less variables makes our model a bit less accurate
+# but the difference is really small so it's not really important to discard those variables
 # If we have too many variables and computation time is important,
 # we can also see that removing the ones we selected won't affect so much our model prediction
 glm.pred[glm.probs>.3]="yes"
@@ -148,7 +156,7 @@ res.accuracy = (res.performance[2,2]+res.performance[1,1])/sum(res.performance)*
 res.error = 100-res.accuracy
 res.precision = (res.performance[2,2])/(res.performance[2,2]+res.performance[1,2])*100
 
-# PRE-PROCESSED DATA
+# PREPROCESSED DATA
 # We will fit our with all the variables and also removing the ones that we mentioned before
 glm.fit = glm(subscribed~., data=learn.data, family="binomial")
 glm.probs=predict(glm.fit, test.data, type="response")
@@ -175,15 +183,12 @@ res.accuracy = (res.performance[2,2]+res.performance[1,1])/sum(res.performance)*
 res.error = 100-res.accuracy
 res.precision = (res.performance[2,2])/(res.performance[2,2]+res.performance[1,2])*100
 
-
 #### To get a better grasp at the performance of our model, we do k-fold cross validation
-library(caret)
-
 precision <- NULL
 accuracy <- NULL
 error <- NULL
 k <- 100
-
+# It may take a while to compute
 for (i in 1:k) 
 {
   N <- nrow(deposit)
@@ -198,8 +203,8 @@ for (i in 1:k)
   
   nlearn <- length(learn.indexes)
   ntest <- N - nlearn
-  
-  glm.fit = glm(subscribed~.-age-job-marital-default-balance-pdays-previous, data=learn.data, family="binomial")
+  #glm.fit = glm(subscribed ~ ., data=learn.data, family="binomial")
+  glm.fit = glm(subscribed ~ .-age-job-marital-default-balance-pdays-previous, data=learn.data, family="binomial")
   glm.probs=predict(glm.fit, test.data, type="response")
   
   glm.pred=rep("no", length(glm.probs))
@@ -213,14 +218,19 @@ for (i in 1:k)
 }
 
 # We can see that our model performs pretty well, even though the data is highly umbalanced
-# Mean values
-# accuracy: 90.03%
-# error: 9.97%
-# precision: 54.22 %
+# Mean values with all the variables
+# accuracy: 89.62%
+# error: 10.38%
+# precision: 59.94 %
+# Mean values without the variables that influence less our model
+# accuracy: 89.74%
+# error: 10.26%
+# precision: 58.56 %
 mean(accuracy)
 mean(error)
 mean(precision)
 
+par(mfrow=c(1,3))
 hist(accuracy, col='lightskyblue', border='lightskyblue4', xlab='Acuracy', main='Acuracy for CV', density=50)
 hist(error, col='lightskyblue', border='lightskyblue4', xlab='Error', main='Error for CV', density=50)
 hist(precision, col='lightskyblue', border='lightskyblue4', xlab='Precision', main='Precision for CV', density=50)
@@ -228,13 +238,10 @@ hist(precision, col='lightskyblue', border='lightskyblue4', xlab='Precision', ma
 boxplot(accuracy, horizontal=T, col='lightskyblue', border='lightskyblue4', xlab='Acuracy', main='Acuracy for CV')
 boxplot(error, horizontal=T, col='lightskyblue', border='lightskyblue4', xlab='Error', main='Error for CV')
 boxplot(precision, horizontal=T, col='lightskyblue', border='lightskyblue4', xlab='Precision', main='Precision for CV')
+dev.off()
 
 # To compare the performance of our model we will also model with LDA and QDA and analyze their performances
 #################### LDA ##################
-# Need to recheck the result since it doesnt make too much sense
-
-library(MASS)
-
 N <- nrow(deposit)
 all.indexes <- 1:N
 
@@ -252,18 +259,7 @@ lda.pred = predict(lda.fit, test.data)
 lda.class = lda.pred$class
 
 # With LDA the precision is much lower, so we won't be using this model
-# 10.04% error, 89.95% accuracy, 43.71% precision
-res.performance = table(lda.class, test.data$subscribed)
-res.accuracy = (res.performance[2,2]+res.performance[1,1])/sum(res.performance)*100
-res.error = 100-res.accuracy
-res.precision = (res.performance[2,2])/(res.performance[2,2]+res.performance[1,2])*100
-
-################# NAIVE BAYES ##################
-library (e1071)
-library(caret)
-bayes.fit <- naiveBayes(subscribed ~ ., data = learn.data)
-bayes.pred <- predict(bayes.fit, test.data)
-
+# 10.54% error, 89.46% accuracy, 29.58% precision
 res.performance = table(lda.class, test.data$subscribed)
 res.accuracy = (res.performance[2,2]+res.performance[1,1])/sum(res.performance)*100
 res.error = 100-res.accuracy
@@ -271,7 +267,8 @@ res.precision = (res.performance[2,2])/(res.performance[2,2]+res.performance[1,2
 
 #################### QDA ##################
 # Performs worse than LDA, but the precision is a bit higher so it detects better the subscriptions
-# 13.24% error, 86.76% accuracy, 48.97% precision
+# We confirm that both LDA and QDA are not suitable models to fit our problem
+# 12.63% error, 87.36% accuracy, 37.87% precision
 qda.fit <- qda(subscribed ~ ., data=learn.data)
 qda.pred = predict(qda.fit, test.data)
 qda.class = qda.pred$class
@@ -281,15 +278,72 @@ res.accuracy = (res.performance[2,2]+res.performance[1,1])/sum(res.performance)*
 res.error = 100-res.accuracy
 res.precision = (res.performance[2,2])/(res.performance[2,2]+res.performance[1,2])*100
 
+################# NAIVE BAYES ##################
+# It performs better than LDA and QDA, but worse than logistic regression
+# 12.90% error, 87.09% accuracy, 45.48% precision
+bayes.fit <- naiveBayes(subscribed ~ ., data = learn.data)
+bayes.pred <- predict(bayes.fit, test.data)
+
+res.performance = table(bayes.pred, test.data$subscribed)
+res.accuracy = (res.performance[2,2]+res.performance[1,1])/sum(res.performance)*100
+res.error = 100-res.accuracy
+res.precision = (res.performance[2,2])/(res.performance[2,2]+res.performance[1,2])*100
+
 #################### Random Forest ##################
-library(randomForest)
-# 9.40% error, 90.60% accuracy, 62.21% precision, so far the best method
+# 9.18% error, 90.82% accuracy, 63.96% precision, so far the best method
 rf <- randomForest(subscribed ~ ., data = original_data[learn.indexes,], ntree=500, proximity=FALSE)
 rf.pred <- predict(rf, newdata=original_data[-learn.indexes,])
 res.performance = table(Truth=original_data[-learn.indexes,]$subscribe,Pred=rf.pred)
 res.accuracy = (res.performance[2,2]+res.performance[1,1])/sum(res.performance)*100
 res.error = 100-res.accuracy
 res.precision = (res.performance[2,2])/(res.performance[2,2]+res.performance[1,2])*100
+
+#### As with logistic regresion we do k-fold CV to confirm our model accuracy and precision
+# We choose k=10 since randomForest has a high computation time
+precision <- NULL
+accuracy <- NULL
+error <- NULL
+k <- 10
+# It may take quite a while to compute
+for (i in 1:k) 
+{
+  N <- nrow(deposit)
+  all.indexes <- 1:N
+  
+  # we choose 9/10s of the data as training data and the rest as test data
+  learn.indexes <- sample(1:N, round(9*N/10))
+  test.indexes <- all.indexes[-learn.indexes]
+  
+  nlearn <- length(learn.indexes)
+  ntest <- N - nlearn
+  #glm.fit = glm(subscribed ~ ., data=learn.data, family="binomial")
+  rf <- randomForest(subscribed ~ ., data = original_data[learn.indexes,], ntree=500, proximity=FALSE)
+  rf.pred <- predict(rf, newdata=original_data[-learn.indexes,])
+  
+  res.performance = table(Truth=original_data[-learn.indexes,]$subscribe,Pred=rf.pred)
+  accuracy[i] <- (res.performance[2,2]+res.performance[1,1])/sum(res.performance)*100
+  error[i] <- 100-accuracy[i]
+  precision[i] <- (res.performance[2,2])/(res.performance[2,2]+res.performance[1,2])*100
+}
+# Mean values
+# accuracy: 90.83%
+# error: 9.17 %
+# precision: 64.52%
+mean(accuracy)
+mean(error)
+mean(precision)
+
+par(mfrow=c(1,3))
+hist(accuracy, col='lightskyblue', border='lightskyblue4', xlab='Acuracy', main='Acuracy for CV', density=50)
+hist(error, col='lightskyblue', border='lightskyblue4', xlab='Error', main='Error for CV', density=50)
+hist(precision, col='lightskyblue', border='lightskyblue4', xlab='Precision', main='Precision for CV', density=50)
+
+boxplot(accuracy, horizontal=T, col='lightskyblue', border='lightskyblue4', xlab='Acuracy', main='Acuracy for CV')
+boxplot(error, horizontal=T, col='lightskyblue', border='lightskyblue4', xlab='Error', main='Error for CV')
+boxplot(precision, horizontal=T, col='lightskyblue', border='lightskyblue4', xlab='Precision', main='Precision for CV')
+dev.off()
+
+# To conclude, random forest is the best method, followed by logistic regression
 
 
 
