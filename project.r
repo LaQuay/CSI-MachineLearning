@@ -54,8 +54,8 @@ hist(log(deposit$duration), col='lightskyblue', border='lightskyblue4', xlab='du
 deposit$duration = scale(log(deposit$duration+0.001)) # +0.001 to avoid -Inf
 
 # Applying log and scale to campaign and previous has some undesired effects, so we will leave them as they are
-hist(scale(log(deposit$campaign+0.001)), col='lightskyblue', border='lightskyblue4', xlab='campaign', main='campaign histogram', density=50)
-hist(scale(log(deposit$previous+0.001)), col='lightskyblue', border='lightskyblue4', xlab='previous', main='previous histogram', density=50)
+hist(scale(log(deposit$campaign+0.001)), col='lightskyblue', border='lightskyblue4', xlab='campaign', main='scale(log(campaign)) histogram', density=50)
+hist(scale(log(deposit$previous+0.001)), col='lightskyblue', border='lightskyblue4', xlab='previous', main='scale(log(previous histogram', density=50)
 
 # pdays has most of values -1 (not contacted previously). 
 # We make a categorical value with "contacted" for pdays!=-1 and "not contacted" previously for pdays=-1
