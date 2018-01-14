@@ -1,6 +1,6 @@
 ####################################################################
 #################### Project 1: the Bank Marketing Data Set
-#################### Robert Carausu & Marc Vila, CSI, 2018
+#################### Robert Carausu & Marc Vila, CSI - MEI 2017-2018
 ####################################################################
 set.seed (6046)
 library(reshape2)
@@ -8,6 +8,7 @@ library(ggplot2)
 
 ## Direct marketing campaigns (phone calls) of a Portuguese banking institution. 
 ## The classification goal is to predict if the client will subscribe a term deposit
+
 ## Getting the dataset
 deposit <- read.table(file="./data/bank.csv", header=TRUE, stringsAsFactors=TRUE, sep=";")
 # We rename the target variable
@@ -19,12 +20,12 @@ original_data = deposit # We make a copy to compare it later with our pre-proces
 dim(deposit)
 summary(deposit)
 # 11.70% of subscribed, so our model sholdn't have a higher error than this
-# Data is very umbalanced so some models will adjust worse than others
+# Data is very unbalanced so some models will adjust worse than others
 sum(deposit$subscribed=="yes")/sum(length(deposit$subscribed))*100
 
 ## Let's have a visual inspection of the continuous variables before pre-processing
 # Age seems ok
-# The other variables are highly skeewed so we will try to scale and apply log where we can
+# The other variables are highly skewed so we will try to scale and apply log where we can
 # We can do it for duration, not for balance since it has negative values and we don't want to lose data
 # pdays can be converted to categorical: "not_contacted" (in previous campaign) and "contacted"
 d.cont <- melt(deposit[,c("age","balance","duration","campaign","pdays","previous")])
@@ -39,7 +40,7 @@ ggplot(d.categ,aes(x = value)) + facet_wrap(~variable,scales = "free") + geom_ba
 # In conclusion LDA/QDA may not the best choice, a good choice may be Logistic Regression. We will test also Naive Bayes and Random Forest and 
 # choose the best model that fits our problem
 
-                                                      #### PRE-PROCESSING ####
+            #### PRE-PROCESSING ####
 #### Fixing skewness and scaling continuous variables
 # The balance has negative values, so we can only scale it
 hist(deposit$balance, col='lightskyblue', border='lightskyblue4', xlab='balance', main='balance histogram', density=50)
@@ -103,7 +104,7 @@ original.test.data <- original_data[test.indexes,]
 nlearn <- length(learn.indexes)
 ntest <- N - nlearn
 
-                                                        #### MODELLING ####
+           #### MODELLING ####
 ############ LOGISTIC REGRESSION ##########
 # We use Logistic Regression as recommended since it doesn't need a lot of preprocessing of the data and we also have a lot of categorical variables
 
