@@ -16,7 +16,7 @@ colnames(deposit)[ncol(deposit)] <- "subscribed"
 original_data = deposit # We make a copy to compare it later with our pre-processed data
 
 # 45211 observations and 17 different variables 
-# (9 categorical: job, marital, education, default, housing, loan, contanct, month, poutcome and y)
+# (9 categorical: job, marital, education, default, housing, loan, contact, month, poutcome and y)
 dim(deposit)
 summary(deposit)
 # 11.70% of subscribed, so our model sholdn't have a higher error than this
@@ -40,7 +40,7 @@ ggplot(d.categ,aes(x = value)) + facet_wrap(~variable,scales = "free") + geom_ba
 # In conclusion LDA/QDA may not the best choice, a good choice may be Logistic Regression. We will test also Naive Bayes and Random Forest and 
 # choose the best model that fits our problem
 
-            #### PRE-PROCESSING ####
+#### PRE-PROCESSING ####
 #### Fixing skewness and scaling continuous variables
 # The balance has negative values, so we can only scale it
 hist(deposit$balance, col='lightskyblue', border='lightskyblue4', xlab='balance', main='balance histogram', density=50)
@@ -48,15 +48,19 @@ hist(deposit$balance, col='lightskyblue', border='lightskyblue4', xlab='balance'
 # The only way to fix it is to delete this observations so we choose to leave it as it is since we don't want to lose data
 sum(deposit$balance<0)
 deposit$balance = scale(deposit$balance)
+# Scaled balance
+hist(scale(deposit$balance), col='lightskyblue', border='lightskyblue4', xlab='balance', main='balance histogram', density=50)
 
 # duration, campaign and previous are all skewed, so we apply log and scale
 hist(deposit$duration, col='lightskyblue', border='lightskyblue4', xlab='duration', main='duration histogram', density=50)
-hist(log(deposit$duration), col='lightskyblue', border='lightskyblue4', xlab='duration', main='duration histogram', density=50)
-deposit$duration = scale(log(deposit$duration+0.001)) # +0.001 to avoid -Inf
+deposit$duration = log(deposit$duration+0.001) # +0.001 to avoid -Inf
+hist(deposit$duration, col='lightskyblue', border='lightskyblue4', xlab='duration', main='duration histogram', density=50)
+deposit$duration = scale(deposit$duration) 
+hist(deposit$duration, col='lightskyblue', border='lightskyblue4', xlab='duration', main='duration histogram', density=50)
 
 # Applying log and scale to campaign and previous has some undesired effects, so we will leave them as they are
 hist(scale(log(deposit$campaign+0.001)), col='lightskyblue', border='lightskyblue4', xlab='campaign', main='scale(log(campaign)) histogram', density=50)
-hist(scale(log(deposit$previous+0.001)), col='lightskyblue', border='lightskyblue4', xlab='previous', main='scale(log(previous histogram', density=50)
+hist(scale(log(deposit$previous+0.001)), col='lightskyblue', border='lightskyblue4', xlab='previous', main='scale(log(previous)) histogram', density=50)
 
 # pdays has most of values -1 (not contacted previously). 
 # We make a categorical value with "contacted" for pdays!=-1 and "not contacted" previously for pdays=-1
@@ -70,7 +74,7 @@ plot(deposit$pdays)
 # There are 288 subscriptions for unknown job, we leave it as it is since we don't want to delete this data
 summary(deposit[deposit$job=="unknown",]) 
 
-# We could change the unkown values to NA (as well as the 0 previous contacts variables), this is useful if we use a Random Forest algorythm,
+# We could change the unknown values to NA (as well as the 0 previous contacts variables), this is useful if we use a Random Forest algorythm,
 # but since it is not the case we leave it as it is
 
 # We plot again after pre-processing
@@ -83,8 +87,7 @@ ggplot(d.categ,aes(x = value)) + facet_wrap(~variable,scales = "free") + geom_ba
 
 library(caret)
 library(MASS)
-library (e1071)
-library(caret)
+library(e1071)
 library(randomForest)
 
 # PREPARING THE TRAINING AND TEST DATA
@@ -104,7 +107,7 @@ original.test.data <- original_data[test.indexes,]
 nlearn <- length(learn.indexes)
 ntest <- N - nlearn
 
-           #### MODELLING ####
+#### MODELLING ####
 ############ LOGISTIC REGRESSION ##########
 # We use Logistic Regression as recommended since it doesn't need a lot of preprocessing of the data and we also have a lot of categorical variables
 
