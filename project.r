@@ -28,13 +28,13 @@ sum(deposit$subscribed=="yes")/sum(length(deposit$subscribed))*100
 # The other variables are highly skewed so we will try to scale and apply log where we can
 # We can do it for duration, not for balance since it has negative values and we don't want to lose data
 # pdays can be converted to categorical: "not_contacted" (in previous campaign) and "contacted"
-d.cont <- melt(deposit[,c("age","balance","duration","campaign","pdays","previous")])
-ggplot(d.cont,aes(x = value)) + facet_wrap(~variable,scales = "free") + geom_histogram() + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5))
+d.cont <- melt(deposit[, c("age", "balance", "duration", "campaign", "pdays", "previous")])
+ggplot(d.cont, aes(x = value)) + facet_wrap(~variable, scales = "free") + geom_histogram() + theme(axis.text.x=element_text(angle=90, hjust=1, vjust=0.5))
 
 ## Let's have a visual inspection of the factor variables before pre-processing
 # They seem ok so we won't be touching these variables
-d.categ <- melt(deposit, measure.vars=c("job","marital","education","housing","loan","contact","default", "poutcome"))
-ggplot(d.categ,aes(x = value)) + facet_wrap(~variable,scales = "free") + geom_bar() + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5))
+d.categ <- melt(deposit, measure.vars=c("job", "marital", "education", "housing", "loan", "contact", "default", "poutcome"))
+ggplot(d.categ, aes(x = value)) + facet_wrap(~variable, scales = "free") + geom_bar() + theme(axis.text.x=element_text(angle=90, hjust=1, vjust=0.5))
 
 # This dataset needs a lot of pre-processing ... also it displays a good mixture of categorical and numeric variables
 # In conclusion LDA/QDA may not the best choice, a good choice may be Logistic Regression. We will test also Naive Bayes and Random Forest and 
@@ -59,8 +59,8 @@ deposit$duration = scale(deposit$duration)
 hist(deposit$duration, col='lightskyblue', border='lightskyblue4', xlab='duration', main='duration histogram', density=50)
 
 # Applying log and scale to campaign and previous has some undesired effects, so we will leave them as they are
-hist(scale(log(deposit$campaign+0.001)), col='lightskyblue', border='lightskyblue4', xlab='campaign', main='scale(log(campaign)) histogram', density=50)
-hist(scale(log(deposit$previous+0.001)), col='lightskyblue', border='lightskyblue4', xlab='previous', main='scale(log(previous)) histogram', density=50)
+hist(scale(log(deposit$campaign + 0.001)), col='lightskyblue', border='lightskyblue4', xlab='campaign', main='scale(log(campaign)) histogram', density=50)
+hist(scale(log(deposit$previous + 0.001)), col='lightskyblue', border='lightskyblue4', xlab='previous', main='scale(log(previous)) histogram', density=50)
 
 # pdays has most of values -1 (not contacted previously). 
 # We make a categorical value with "contacted" for pdays!=-1 and "not contacted" previously for pdays=-1
@@ -78,12 +78,12 @@ summary(deposit[deposit$job=="unknown",])
 # but since it is not the case we leave it as it is
 
 # We plot again after pre-processing
-d.cont <- melt(deposit[,c("age","balance","duration","campaign","previous")])
-ggplot(d.cont,aes(x = value)) + facet_wrap(~variable,scales = "free") + geom_histogram() + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5))
+d.cont <- melt(deposit[, c("age", "balance", "duration", "campaign", "previous")])
+ggplot(d.cont, aes(x = value)) + facet_wrap(~variable, scales = "free") + geom_histogram() + theme(axis.text.x=element_text(angle=90, hjust=1, vjust=0.5))
 
 # Now pdays is categorical
-d.categ <- melt(deposit, measure.vars=c("job","marital","education","housing","loan","contact","default", "poutcome", "pdays"))
-ggplot(d.categ,aes(x = value)) + facet_wrap(~variable,scales = "free") + geom_bar() + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5))
+d.categ <- melt(deposit, measure.vars=c("job", "marital", "education", "housing", "loan", "contact", "default", "poutcome", "pdays"))
+ggplot(d.categ, aes(x = value)) + facet_wrap(~variable, scales = "free") + geom_bar() + theme(axis.text.x=element_text(angle=90, hjust=1, vjust=0.5))
 
 library(caret)
 library(MASS)
@@ -123,9 +123,9 @@ glm.fit = glm(subscribed~., data=original.learn.data, family="binomial")
 summary(glm.fit)
 
 # We calculate the prediction with and without the discarded variables and compare the errors
-glm.probs=predict(glm.fit, original.test.data, type="response")
-glm.pred=rep("no", length(glm.probs))
-glm.pred[glm.probs>.5]="yes"
+glm.probs = predict(glm.fit, original.test.data, type="response")
+glm.pred = rep("no", length(glm.probs))
+glm.pred[glm.probs>.5] = "yes"
 
 # We choose 3 values to represent our model performance: accuracy, error and precision, the last one is important
 # because the bank wants to contact only those clients that are more probable to subscribe to the loan
@@ -133,58 +133,58 @@ glm.pred[glm.probs>.5]="yes"
 # for which a client may subscribe a loan (the probability) compare the values again, since for the bank clients
 # with 30% probability of subscribing is probably worth to spend it's ressources contacting them
 res.performance = table(glm.pred, original.test.data$subscribed)
-res.accuracy = (res.performance[2,2]+res.performance[1,1])/sum(res.performance)*100
-res.error = 100-res.accuracy
-res.precision = (res.performance[2,2])/(res.performance[2,2]+res.performance[1,2])*100
+res.accuracy = (res.performance[2,2] + res.performance[1,1])/sum(res.performance)*100
+res.error = 100 - res.accuracy
+res.precision = (res.performance[2,2])/(res.performance[2,2] + res.performance[1,2])*100
 
 # Accuracy is slightly lower (90.03%) but precission has almost doubled (53.78%)
-glm.pred[glm.probs>.3]="yes"
+glm.pred[glm.probs>.3] = "yes"
 res.performance = table(glm.pred, original.test.data$subscribed)
-res.accuracy = (res.performance[2,2]+res.performance[1,1])/sum(res.performance)*100
-res.error = 100-res.accuracy
-res.precision = (res.performance[2,2])/(res.performance[2,2]+res.performance[1,2])*100
+res.accuracy = (res.performance[2,2] + res.performance[1,1])/sum(res.performance)*100
+res.error = 100 - res.accuracy
+res.precision = (res.performance[2,2])/(res.performance[2,2] + res.performance[1,2])*100
 
 # Now we fit the model without the variables that had less of an impact
 glm.fit = glm(subscribed~.-age-job-marital-default-balance-pdays-previous, data=original.learn.data, family="binomial")
-glm.probs=predict(glm.fit, original.test.data, type="response")
-glm.pred=rep("no", length(glm.probs))
+glm.probs = predict(glm.fit, original.test.data, type="response")
+glm.pred = rep("no", length(glm.probs))
 
 # The total accuracy decreases to 89.93% and precission to 53.32%, so using less variables makes our model a bit less accurate
 # but the difference is really small so it's not really important to discard those variables
 # If we have too many variables and computation time is important,
 # we can also see that removing the ones we selected won't affect so much our model prediction
-glm.pred[glm.probs>.3]="yes"
+glm.pred[glm.probs>.3] = "yes"
 res.performance = table(glm.pred, original.test.data$subscribed)
-res.accuracy = (res.performance[2,2]+res.performance[1,1])/sum(res.performance)*100
-res.error = 100-res.accuracy
-res.precision = (res.performance[2,2])/(res.performance[2,2]+res.performance[1,2])*100
+res.accuracy = (res.performance[2,2] + res.performance[1,1])/sum(res.performance)*100
+res.error = 100 - res.accuracy
+res.precision = (res.performance[2,2])/(res.performance[2,2] + res.performance[1,2])*100
 
 # PREPROCESSED DATA
 # We will fit with all the variables and also removing the ones that we mentioned before
 glm.fit = glm(subscribed~., data=learn.data, family="binomial")
-glm.probs=predict(glm.fit, test.data, type="response")
-glm.pred=rep("no", length(glm.probs))
+glm.probs = predict(glm.fit, test.data, type="response")
+glm.pred = rep("no", length(glm.probs))
 
 # Accuracy is 89.40% and precission is 57.95%, so our model is much more precise detecting clients 
 # that will probably buy the finantial product of the bank with the preprocessed data
-glm.pred[glm.probs>.3]="yes"
+glm.pred[glm.probs>.3] = "yes"
 res.performance = table(glm.pred, original.test.data$subscribed)
-res.accuracy = (res.performance[2,2]+res.performance[1,1])/sum(res.performance)*100
-res.error = 100-res.accuracy
-res.precision = (res.performance[2,2])/(res.performance[2,2]+res.performance[1,2])*100
+res.accuracy = (res.performance[2,2] + res.performance[1,1])/sum(res.performance)*100
+res.error = 100 - res.accuracy
+res.precision = (res.performance[2,2])/(res.performance[2,2] + res.performance[1,2])*100
 
 # Now we fit the model without the variables that had less of an impact
 glm.fit = glm(subscribed~.-age-job-marital-default-balance-pdays-previous, data=learn.data, family="binomial")
-glm.probs=predict(glm.fit, test.data, type="response")
-glm.pred=rep("no", length(glm.probs))
+glm.probs = predict(glm.fit, test.data, type="response")
+glm.pred = rep("no", length(glm.probs))
 
 # Accuracy: 89.47%, precision: 57.44%
 # As before, there is a small reduction in accuracy and precision but the results with preprocessed data are better
-glm.pred[glm.probs>.3]="yes"
+glm.pred[glm.probs>.3] = "yes"
 res.performance = table(glm.pred, original.test.data$subscribed)
-res.accuracy = (res.performance[2,2]+res.performance[1,1])/sum(res.performance)*100
-res.error = 100-res.accuracy
-res.precision = (res.performance[2,2])/(res.performance[2,2]+res.performance[1,2])*100
+res.accuracy = (res.performance[2,2] + res.performance[1,1])/sum(res.performance)*100
+res.error = 100 - res.accuracy
+res.precision = (res.performance[2,2])/(res.performance[2,2] + res.performance[1,2])*100
 
 #### To get a better grasp at the performance of our model, we do k-fold cross validation
 precision <- NULL
@@ -209,15 +209,15 @@ for (i in 1:k)
   ntest <- N - nlearn
   glm.fit = glm(subscribed ~ ., data=learn.data, family="binomial")
   #glm.fit = glm(subscribed ~ .-age-job-marital-default-balance-pdays-previous, data=learn.data, family="binomial")
-  glm.probs=predict(glm.fit, test.data, type="response")
+  glm.probs = predict(glm.fit, test.data, type="response")
   
-  glm.pred=rep("no", length(glm.probs))
-  glm.pred[glm.probs>.3]="yes"
+  glm.pred = rep("no", length(glm.probs))
+  glm.pred[glm.probs>.3] = "yes"
   
   res.performance = table(glm.pred, test.data$subscribed)
-  accuracy[i] <- (res.performance[2,2]+res.performance[1,1])/sum(res.performance)*100
-  error[i] <- 100-accuracy[i]
-  precision[i] <- (res.performance[2,2])/(res.performance[2,2]+res.performance[1,2])*100
+  accuracy[i] <- (res.performance[2,2] + res.performance[1,1])/sum(res.performance)*100
+  error[i] <- 100 - accuracy[i]
+  precision[i] <- (res.performance[2,2])/(res.performance[2,2] + res.performance[1,2])*100
 }
 
 # We can see that our model performs pretty well, even though the data is highly unbalanced
@@ -266,9 +266,9 @@ lda.pred = predict(lda.fit, test.data)
 lda.class = lda.pred$class
 
 res.performance = table(lda.class, test.data$subscribed)
-res.accuracy = (res.performance[2,2]+res.performance[1,1])/sum(res.performance)*100
-res.error = 100-res.accuracy
-res.precision = (res.performance[2,2])/(res.performance[2,2]+res.performance[1,2])*100
+res.accuracy = (res.performance[2,2] + res.performance[1,1])/sum(res.performance)*100
+res.error = 100 - res.accuracy
+res.precision = (res.performance[2,2])/(res.performance[2,2] + res.performance[1,2])*100
 
 #################### QDA ##################
 # Performs worse than LDA, but the precision is a bit higher so it detects better the subscriptions
@@ -279,9 +279,9 @@ qda.pred = predict(qda.fit, test.data)
 qda.class = qda.pred$class
 
 res.performance = table(qda.class, test.data$subscribed)
-res.accuracy = (res.performance[2,2]+res.performance[1,1])/sum(res.performance)*100
-res.error = 100-res.accuracy
-res.precision = (res.performance[2,2])/(res.performance[2,2]+res.performance[1,2])*100
+res.accuracy = (res.performance[2,2] + res.performance[1,1])/sum(res.performance)*100
+res.error = 100 - res.accuracy
+res.precision = (res.performance[2,2])/(res.performance[2,2] + res.performance[1,2])*100
 
 ################# NAIVE BAYES ##################
 # It performs better than LDA and QDA, but worse than logistic regression
@@ -290,9 +290,9 @@ bayes.fit <- naiveBayes(subscribed ~ ., data = learn.data)
 bayes.pred <- predict(bayes.fit, test.data)
 
 res.performance = table(bayes.pred, test.data$subscribed)
-res.accuracy = (res.performance[2,2]+res.performance[1,1])/sum(res.performance)*100
-res.error = 100-res.accuracy
-res.precision = (res.performance[2,2])/(res.performance[2,2]+res.performance[1,2])*100
+res.accuracy = (res.performance[2,2] + res.performance[1,1])/sum(res.performance)*100
+res.error = 100 - res.accuracy
+res.precision = (res.performance[2,2])/(res.performance[2,2] + res.performance[1,2])*100
 
 #################### Random Forest ##################
 # 9.30% error, 90.70% accuracy, 64.66% precision, so far the best method
@@ -300,9 +300,9 @@ rf <- randomForest(subscribed ~ ., data = original_data[learn.indexes,], ntree=3
 rf.pred <- predict(rf, newdata=original_data[-learn.indexes,])
 
 res.performance = table(Truth=original_data[-learn.indexes,]$subscribe,Pred=rf.pred)
-res.accuracy = (res.performance[2,2]+res.performance[1,1])/sum(res.performance)*100
-res.error = 100-res.accuracy
-res.precision = (res.performance[2,2])/(res.performance[2,2]+res.performance[1,2])*100
+res.accuracy = (res.performance[2,2] + res.performance[1,1])/sum(res.performance)*100
+res.error = 100 - res.accuracy
+res.precision = (res.performance[2,2])/(res.performance[2,2] + res.performance[1,2])*100
 
 #### As with logistic regresion we do k-fold CV to confirm our model accuracy and precision
 # We choose k=10 since randomForest has a high computation time
@@ -328,9 +328,9 @@ for (i in 1:k)
   rf.pred <- predict(rf, newdata=original_data[-learn.indexes,])
   
   res.performance = table(Truth=original_data[-learn.indexes,]$subscribe,Pred=rf.pred)
-  accuracy[i] <- (res.performance[2,2]+res.performance[1,1])/sum(res.performance)*100
-  error[i] <- 100-accuracy[i]
-  precision[i] <- (res.performance[2,2])/(res.performance[2,2]+res.performance[1,2])*100
+  accuracy[i] <- (res.performance[2,2] + res.performance[1,1])/sum(res.performance)*100
+  error[i] <- 100 - accuracy[i]
+  precision[i] <- (res.performance[2,2])/(res.performance[2,2] + res.performance[1,2])*100
 }
 # Mean values
 # accuracy: 90.83%
