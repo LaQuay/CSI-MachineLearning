@@ -149,7 +149,7 @@ glm.fit = glm(subscribed~.-age-job-marital-default-balance-pdays-previous, data=
 glm.probs=predict(glm.fit, original.test.data, type="response")
 glm.pred=rep("no", length(glm.probs))
 
-# The total accuracy decreases to 89.92% and precission to 53.31%, so using less variables makes our model a bit less accurate
+# The total accuracy decreases to 89.93% and precission to 53.32%, so using less variables makes our model a bit less accurate
 # but the difference is really small so it's not really important to discard those variables
 # If we have too many variables and computation time is important,
 # we can also see that removing the ones we selected won't affect so much our model prediction
@@ -165,21 +165,22 @@ glm.fit = glm(subscribed~., data=learn.data, family="binomial")
 glm.probs=predict(glm.fit, test.data, type="response")
 glm.pred=rep("no", length(glm.probs))
 
-glm.pred[glm.probs>.3]="yes"
 # Accuracy is 89.40% and precission is 57.95%, so our model is much more precise detecting clients 
 # that will probably buy the finantial product of the bank with the preprocessed data
+glm.pred[glm.probs>.3]="yes"
 res.performance = table(glm.pred, original.test.data$subscribed)
 res.accuracy = (res.performance[2,2]+res.performance[1,1])/sum(res.performance)*100
 res.error = 100-res.accuracy
 res.precision = (res.performance[2,2])/(res.performance[2,2]+res.performance[1,2])*100
 
+# Now we fit the model without the variables that had less of an impact
 glm.fit = glm(subscribed~.-age-job-marital-default-balance-pdays-previous, data=learn.data, family="binomial")
 glm.probs=predict(glm.fit, test.data, type="response")
 glm.pred=rep("no", length(glm.probs))
 
-glm.pred[glm.probs>.3]="yes"
 # Accuracy: 89.47%, precision: 57.44%
 # As before, there is a small reduction in accuracy and precision but the results with preprocessed data are better
+glm.pred[glm.probs>.3]="yes"
 res.performance = table(glm.pred, original.test.data$subscribed)
 res.accuracy = (res.performance[2,2]+res.performance[1,1])/sum(res.performance)*100
 res.error = 100-res.accuracy
@@ -206,8 +207,8 @@ for (i in 1:k)
   
   nlearn <- length(learn.indexes)
   ntest <- N - nlearn
-  #glm.fit = glm(subscribed ~ ., data=learn.data, family="binomial")
-  glm.fit = glm(subscribed ~ .-age-job-marital-default-balance-pdays-previous, data=learn.data, family="binomial")
+  glm.fit = glm(subscribed ~ ., data=learn.data, family="binomial")
+  #glm.fit = glm(subscribed ~ .-age-job-marital-default-balance-pdays-previous, data=learn.data, family="binomial")
   glm.probs=predict(glm.fit, test.data, type="response")
   
   glm.pred=rep("no", length(glm.probs))
@@ -221,13 +222,14 @@ for (i in 1:k)
 
 # We can see that our model performs pretty well, even though the data is highly unbalanced
 # Mean values with all the variables
-# accuracy: 89.62%
-# error: 10.38%
-# precision: 59.94 %
-# Mean values without the variables that influence less our model
+# accuracy: 89.69%
+# error: 10.31%
+# precision: 58.80 %
+
+# Mean values without the variables that influence less our model (swap the commented code in the previous bucle)
 # accuracy: 89.74%
 # error: 10.26%
-# precision: 58.56 %
+# precision: 58.37 %
 mean(accuracy)
 mean(error)
 mean(precision)
@@ -258,8 +260,7 @@ ntest <- N - nlearn
 
 #################### LDA ##################
 # With LDA the precision is much lower, so we won't be using this model
-# 10.54% error, 89.46% accuracy, 29.58% precision
-
+# 10.73% error, 89.27% accuracy, 28.51% precision
 lda.fit = lda(subscribed ~ ., data=learn.data)
 lda.pred = predict(lda.fit, test.data)
 lda.class = lda.pred$class
@@ -272,7 +273,7 @@ res.precision = (res.performance[2,2])/(res.performance[2,2]+res.performance[1,2
 #################### QDA ##################
 # Performs worse than LDA, but the precision is a bit higher so it detects better the subscriptions
 # We confirm that both LDA and QDA are not suitable models to fit our problem
-# 12.63% error, 87.36% accuracy, 37.87% precision
+# 13.43% error, 86.57% accuracy, 37.99% precision
 qda.fit <- qda(subscribed ~ ., data=learn.data)
 qda.pred = predict(qda.fit, test.data)
 qda.class = qda.pred$class
@@ -284,7 +285,7 @@ res.precision = (res.performance[2,2])/(res.performance[2,2]+res.performance[1,2
 
 ################# NAIVE BAYES ##################
 # It performs better than LDA and QDA, but worse than logistic regression
-# 12.90% error, 87.09% accuracy, 45.48% precision
+# 12.57% error, 87.43% accuracy, 43.89% precision
 bayes.fit <- naiveBayes(subscribed ~ ., data = learn.data)
 bayes.pred <- predict(bayes.fit, test.data)
 
@@ -294,7 +295,7 @@ res.error = 100-res.accuracy
 res.precision = (res.performance[2,2])/(res.performance[2,2]+res.performance[1,2])*100
 
 #################### Random Forest ##################
-# 9.21% error, 90.78% accuracy, 62.99% precision, so far the best method
+# 9.30% error, 90.70% accuracy, 64.66% precision, so far the best method
 rf <- randomForest(subscribed ~ ., data = original_data[learn.indexes,], ntree=300, proximity=FALSE)
 rf.pred <- predict(rf, newdata=original_data[-learn.indexes,])
 
@@ -309,6 +310,7 @@ precision <- NULL
 accuracy <- NULL
 error <- NULL
 k <- 10
+
 # It may take quite a while to compute
 for (i in 1:k) 
 {
@@ -333,7 +335,7 @@ for (i in 1:k)
 # Mean values
 # accuracy: 90.83%
 # error: 9.17 %
-# precision: 63.84%
+# precision: 64.66%
 mean(accuracy)
 mean(error)
 mean(precision)
