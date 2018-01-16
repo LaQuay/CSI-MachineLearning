@@ -123,7 +123,6 @@ glm.fit = glm(subscribed~., data=original.learn.data, family="binomial")
 summary(glm.fit)
 
 # We calculate the prediction with and without the discarded variables and compare the errors
-
 glm.probs=predict(glm.fit, original.test.data, type="response")
 glm.pred=rep("no", length(glm.probs))
 glm.pred[glm.probs>.5]="yes"
@@ -150,7 +149,7 @@ glm.fit = glm(subscribed~.-age-job-marital-default-balance-pdays-previous, data=
 glm.probs=predict(glm.fit, original.test.data, type="response")
 glm.pred=rep("no", length(glm.probs))
 
-# The total accuracy decreases to 89.92% and precison to 53.31%, so using less variables makes our model a bit less accurate
+# The total accuracy decreases to 89.92% and precission to 53.31%, so using less variables makes our model a bit less accurate
 # but the difference is really small so it's not really important to discard those variables
 # If we have too many variables and computation time is important,
 # we can also see that removing the ones we selected won't affect so much our model prediction
@@ -161,10 +160,9 @@ res.error = 100-res.accuracy
 res.precision = (res.performance[2,2])/(res.performance[2,2]+res.performance[1,2])*100
 
 # PREPROCESSED DATA
-# We will fit our with all the variables and also removing the ones that we mentioned before
+# We will fit with all the variables and also removing the ones that we mentioned before
 glm.fit = glm(subscribed~., data=learn.data, family="binomial")
 glm.probs=predict(glm.fit, test.data, type="response")
-
 glm.pred=rep("no", length(glm.probs))
 
 glm.pred[glm.probs>.3]="yes"
@@ -192,6 +190,7 @@ precision <- NULL
 accuracy <- NULL
 error <- NULL
 k <- 100
+
 # It may take a while to compute
 for (i in 1:k) 
 {
@@ -218,10 +217,9 @@ for (i in 1:k)
   accuracy[i] <- (res.performance[2,2]+res.performance[1,1])/sum(res.performance)*100
   error[i] <- 100-accuracy[i]
   precision[i] <- (res.performance[2,2])/(res.performance[2,2]+res.performance[1,2])*100
-  
 }
 
-# We can see that our model performs pretty well, even though the data is highly umbalanced
+# We can see that our model performs pretty well, even though the data is highly unbalanced
 # Mean values with all the variables
 # accuracy: 89.62%
 # error: 10.38%
@@ -244,8 +242,8 @@ boxplot(error, horizontal=T, col='lightskyblue', border='lightskyblue4', xlab='E
 boxplot(precision, horizontal=T, col='lightskyblue', border='lightskyblue4', xlab='Precision', main='Precision for CV')
 dev.off()
 
-# To compare the performance of our model we will also model with LDA and QDA and analyze their performances
-#################### LDA ##################
+# To compare the performance of our model we will also model with LDA and QDA and analyze their performances.
+# Also we will test NaiveBayes and RandomForest
 N <- nrow(deposit)
 all.indexes <- 1:N
 
@@ -258,12 +256,14 @@ test.data <- deposit[test.indexes,]
 nlearn <- length(learn.indexes)
 ntest <- N - nlearn
 
+#################### LDA ##################
+# With LDA the precision is much lower, so we won't be using this model
+# 10.54% error, 89.46% accuracy, 29.58% precision
+
 lda.fit = lda(subscribed ~ ., data=learn.data)
 lda.pred = predict(lda.fit, test.data)
 lda.class = lda.pred$class
 
-# With LDA the precision is much lower, so we won't be using this model
-# 10.54% error, 89.46% accuracy, 29.58% precision
 res.performance = table(lda.class, test.data$subscribed)
 res.accuracy = (res.performance[2,2]+res.performance[1,1])/sum(res.performance)*100
 res.error = 100-res.accuracy
@@ -294,9 +294,10 @@ res.error = 100-res.accuracy
 res.precision = (res.performance[2,2])/(res.performance[2,2]+res.performance[1,2])*100
 
 #################### Random Forest ##################
-# 9.18% error, 90.82% accuracy, 63.96% precision, so far the best method
-rf <- randomForest(subscribed ~ ., data = original_data[learn.indexes,], ntree=500, proximity=FALSE)
+# 9.21% error, 90.78% accuracy, 62.99% precision, so far the best method
+rf <- randomForest(subscribed ~ ., data = original_data[learn.indexes,], ntree=300, proximity=FALSE)
 rf.pred <- predict(rf, newdata=original_data[-learn.indexes,])
+
 res.performance = table(Truth=original_data[-learn.indexes,]$subscribe,Pred=rf.pred)
 res.accuracy = (res.performance[2,2]+res.performance[1,1])/sum(res.performance)*100
 res.error = 100-res.accuracy
@@ -321,7 +322,7 @@ for (i in 1:k)
   nlearn <- length(learn.indexes)
   ntest <- N - nlearn
   #glm.fit = glm(subscribed ~ ., data=learn.data, family="binomial")
-  rf <- randomForest(subscribed ~ ., data = original_data[learn.indexes,], ntree=500, proximity=FALSE)
+  rf <- randomForest(subscribed ~ ., data = original_data[learn.indexes,], ntree=300, proximity=FALSE)
   rf.pred <- predict(rf, newdata=original_data[-learn.indexes,])
   
   res.performance = table(Truth=original_data[-learn.indexes,]$subscribe,Pred=rf.pred)
@@ -332,7 +333,7 @@ for (i in 1:k)
 # Mean values
 # accuracy: 90.83%
 # error: 9.17 %
-# precision: 64.52%
+# precision: 63.84%
 mean(accuracy)
 mean(error)
 mean(precision)
@@ -347,20 +348,4 @@ boxplot(error, horizontal=T, col='lightskyblue', border='lightskyblue4', xlab='E
 boxplot(precision, horizontal=T, col='lightskyblue', border='lightskyblue4', xlab='Precision', main='Precision for CV')
 dev.off()
 
-# To conclude, random forest is the best method, followed by logistic regression
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+# To conclude, random forest is the best method, followed by logistic regression, according to the results
